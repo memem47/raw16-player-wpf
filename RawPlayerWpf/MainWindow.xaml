@@ -10,6 +10,7 @@
         </Grid.RowDefinitions>
 
         <!-- Controls -->
+        <!-- Controls -->
         <StackPanel Orientation="Horizontal" Margin="8" Grid.Row="0" VerticalAlignment="Center">
             <Button Content="フォルダ選択" Width="110" Margin="0,0,8,0" Click="BtnSelectFolder_Click"/>
             <Button Content="再生" Width="70" Margin="0,0,6,0" Click="BtnPlay_Click"/>
@@ -26,10 +27,24 @@
             <TextBox x:Name="TxtH" Width="60" Text="512" Margin="4,0,12,0"/>
 
             <TextBlock Text="FPS:" VerticalAlignment="Center"/>
-            <TextBox x:Name="TxtFps" Width="60" Text="30" Margin="4,0,12,0"/>
+            <TextBox x:Name="TxtFps" Width="60" Text="30" Margin="4,0,16,0"/>
+
+            <!-- WL/WW -->
+            <TextBlock Text="WL:" VerticalAlignment="Center"/>
+            <Slider x:Name="SldWL" Width="180" Minimum="0" Maximum="65535" Value="20000"
+            Margin="6,0,6,0" ValueChanged="SldWL_ValueChanged"/>
+            <TextBlock x:Name="TxtWL" Width="70" Text="20000" VerticalAlignment="Center" Margin="0,0,12,0"/>
+
+            <TextBlock Text="WW:" VerticalAlignment="Center"/>
+            <Slider x:Name="SldWW" Width="180" Minimum="1" Maximum="65535" Value="40000"
+            Margin="6,0,6,0" ValueChanged="SldWW_ValueChanged"/>
+            <TextBlock x:Name="TxtWW" Width="70" Text="40000" VerticalAlignment="Center" Margin="0,0,12,0"/>
+
+            <Button Content="Reset WL/WW" Margin="0,0,12,0" Click="BtnResetWlWw_Click"/>
 
             <TextBlock x:Name="TxtStatus" VerticalAlignment="Center" Margin="8,0,0,0"/>
         </StackPanel>
+
 
         <!-- Viewer Area -->
         <Border Grid.Row="1" Margin="8" BorderBrush="Gray" BorderThickness="1" Background="Black">
