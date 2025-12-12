@@ -18,6 +18,10 @@ namespace RawPlayerWpf
         private WriteableBitmap _wb;
         private DispatcherTimer _timer;
 
+        private ushort[] _currentFrame16;   // 現在フレームのushort配列（WL/WW用に保持）
+        private byte[] _display8;           // 表示用8bitバッファ（使い回し）
+        private WriteableBitmap _wb8;       // Gray8表示用
+        
         public MainWindow()
         {
             InitializeComponent();
@@ -117,7 +121,6 @@ namespace RawPlayerWpf
             ShowFrame(_index);
             UpdateStatus();
         }
-
         private void ShowFrame(int idx)
         {
             if (!int.TryParse(TxtW.Text, out int w) || w <= 0) w = 512;
@@ -131,34 +134,33 @@ namespace RawPlayerWpf
             if (bytes.Length != expectedBytes)
             {
                 MessageBox.Show(
-                    $"サイズ不一致:\n{Path.GetFileName(path)}\nbytes={bytes.Length}, expected={expectedBytes}\nW/H設定を確認してください。",
+                    $"サイズ不一致:\n{System.IO.Path.GetFileName(path)}\nbytes={bytes.Length}, expected={expectedBytes}\nW/H設定を確認してください。",
                     "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 _timer.Stop();
                 return;
             }
 
-            // WriteableBitmap (Gray16)
-            if (_wb == null || _wb.PixelWidth != w || _wb.PixelHeight != h || _wb.Format != PixelFormats.Gray16)
+            // ushort配列へ（little-endian前提）
+            int nPix = w * h;
+            if (_currentFrame16 == null || _currentFrame16.Length != nPix)
+                _currentFrame16 = new ushort[nPix];
+
+            Buffer.BlockCopy(bytes, 0, _currentFrame16, 0, expectedBytes);
+
+            // 表示用 WriteableBitmap(Gray8) を準備
+            if (_wb8 == null || _wb8.PixelWidth != w || _wb8.PixelHeight != h || _wb8.Format != PixelFormats.Gray8)
             {
-                _wb = new WriteableBitmap(w, h, 96, 96, PixelFormats.Gray16, null);
-                Img.Source = _wb;
+                _wb8 = new WriteableBitmap(w, h, 96, 96, PixelFormats.Gray8, null);
+                Img.Source = _wb8;
             }
 
-            // Gray16: stride = w * 2 bytes
-            int stride = w * 2;
+            if (_display8 == null || _display8.Length != nPix)
+                _display8 = new byte[nPix];
 
-            // UIスレッドでCopyPixels（TimerはUIスレッドでTickする）
-            _wb.Lock();
-            try
-            {
-                _wb.WritePixels(new Int32Rect(0, 0, w, h), bytes, stride, 0);
-                _wb.AddDirtyRect(new Int32Rect(0, 0, w, h));
-            }
-            finally
-            {
-                _wb.Unlock();
-            }
+            // WL/WWで表示を更新
+            RenderCurrentFrameWithWlWw();
         }
+
 
         private void UpdateStatus()
         {
@@ -169,5 +171,67 @@ namespace RawPlayerWpf
 
             TxtStatus.Text = info;
         }
+        private void SldWL_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (TxtWL != null)
+                TxtWL.Text = ((int)SldWL.Value).ToString();
+            RenderCurrentFrameWithWlWw();
+        }
+
+        private void SldWW_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (TxtWW != null)
+                TxtWW.Text = ((int)SldWW.Value).ToString();
+            RenderCurrentFrameWithWlWw();
+        }
+
+        private void BtnResetWlWw_Click(object sender, RoutedEventArgs e)
+        {
+            // とりあえず「それっぽい」初期値に戻す（必要なら後で自動推定に変える）
+            SldWL.Value = 20000;
+            SldWW.Value = 40000;
+        }
+        private void RenderCurrentFrameWithWlWw()
+        {
+            if (_currentFrame16 == null || _wb8 == null || _display8 == null) return;
+
+            int w = _wb8.PixelWidth;
+            int h = _wb8.PixelHeight;
+
+            // WL/WW
+            double wl = SldWL.Value;
+            double ww = Math.Max(1.0, SldWW.Value);
+
+            // Windowの下限/上限
+            double low = wl - ww / 2.0;
+            double high = wl + ww / 2.0;
+            double inv = 255.0 / (high - low);
+
+            int n = w * h;
+            for (int i = 0; i < n; i++)
+            {
+                double v = _currentFrame16[i];
+
+                if (v <= low) _display8[i] = 0;
+                else if (v >= high) _display8[i] = 255;
+                else _display8[i] = (byte)((v - low) * inv);
+            }
+
+            // Gray8: stride = w
+            int stride = w;
+
+            _wb8.Lock();
+            try
+            {
+                _wb8.WritePixels(new Int32Rect(0, 0, w, h), _display8, stride, 0);
+                _wb8.AddDirtyRect(new Int32Rect(0, 0, w, h));
+            }
+            finally
+            {
+                _wb8.Unlock();
+            }
+        }
+
+
     }
 }
