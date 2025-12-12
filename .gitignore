@@ -1,0 +1,42 @@
+# Visual Studio
+.vs/
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# ReSharper / Rider
+.idea/
+*.DotSettings.user
+
+# NuGet
+packages/
+*.nupkg
+
+# Logs
+*.log
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Optional: raw / large data
+raw16_frames/
+previews/
+*.raw
+*.mp4
+
+# =========================
+# Python
+# =========================
+python/.venv/
+python/__pycache__/
+python/*.pyc
+
+# Python outputs (optional)
+python/raw16_frames/
+python/previews/
+python/*.mp4
+python/*.raw
