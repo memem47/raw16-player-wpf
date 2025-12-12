@@ -8,6 +8,8 @@ using System.Windows.Threading;
 using System.Collections.Generic;
 using Microsoft.Win32;
 
+using ImageProcCli;
+
 namespace RawPlayerWpf
 {
     public partial class MainWindow : Window
@@ -194,15 +196,34 @@ namespace RawPlayerWpf
         private void RenderCurrentFrameWithWlWw()
         {
             if (_currentFrame16 == null || _wb8 == null || _display8 == null) return;
+            if (SldWL == null || SldWW == null) return;
 
             int w = _wb8.PixelWidth;
             int h = _wb8.PixelHeight;
 
-            // WL/WW
+            ushort[] src16 = _currentFrame16;
+
+            // ★ DLL呼び出し（チェックONの時だけ）
+            if (ChkDenoise != null && ChkDenoise.IsChecked == true)
+            {
+                double ms;
+                // C++/CLI の static 関数を呼ぶ（.NET参照なのでそのまま）
+                ushort[] filtered = CpuFilters.Box3x3(src16, w, h, out ms);
+                src16 = filtered;
+
+                if (TxtProcMs != null)
+                    TxtProcMs.Text = $"CPU: {ms:F3} ms";
+            }
+            else
+            {
+                if (TxtProcMs != null)
+                    TxtProcMs.Text = "";
+            }
+
+            // 以下、WL/WWで src16 を 8bitに落として表示
             double wl = SldWL.Value;
             double ww = Math.Max(1.0, SldWW.Value);
 
-            // Windowの下限/上限
             double low = wl - ww / 2.0;
             double high = wl + ww / 2.0;
             double inv = 255.0 / (high - low);
@@ -210,16 +231,13 @@ namespace RawPlayerWpf
             int n = w * h;
             for (int i = 0; i < n; i++)
             {
-                double v = _currentFrame16[i];
-
+                double v = src16[i];
                 if (v <= low) _display8[i] = 0;
                 else if (v >= high) _display8[i] = 255;
                 else _display8[i] = (byte)((v - low) * inv);
             }
 
-            // Gray8: stride = w
             int stride = w;
-
             _wb8.Lock();
             try
             {
@@ -231,7 +249,5 @@ namespace RawPlayerWpf
                 _wb8.Unlock();
             }
         }
-
-
     }
 }
