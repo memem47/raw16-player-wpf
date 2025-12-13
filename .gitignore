@@ -1,42 +1,76 @@
-# Visual Studio
+# =========================
+# Visual Studio / MSBuild
+# =========================
 .vs/
 [Bb]in/
 [Oo]bj/
+x64/
+x86/
+[Aa]rm64/
+Debug/
+Release/
 *.user
 *.suo
 *.userosscache
 *.sln.docstates
-
-# ReSharper / Rider
-.idea/
-*.DotSettings.user
-
-# NuGet
-packages/
-*.nupkg
-
-# Logs
+*.VC.db
+*.VC.VC.opendb
+ipch/
+*.ipch
+*.tlog
 *.log
 
-# OS
-Thumbs.db
-.DS_Store
+# C++ build artifacts
+*.obj
+*.pdb
+*.ilk
+*.idb
+*.exp
+*.lib
+*.dll
+*.exe
 
-# Optional: raw / large data
-raw16_frames/
-previews/
-*.raw
-*.mp4
+# (例外) 配布用にコミットしたいdll/libがある場合は個別に戻す
+#!/third_party/*.dll
+#!/third_party/*.lib
+
+# =========================
+# CUDA / NVCC artifacts
+# =========================
+**/cu.cache/
+**/*.cu.obj
+**/*.cudafe1.cpp
+**/*.cudafe1.stub.c
+**/*.cudafe1.gpu
+**/*.cudafe1.c
+**/*.ptx
+**/*.cubin
+**/*.fatbin
+**/*.nvvp
+**/*.prof
+**/tmpxft_*
+**/*.i
+**/*.ii
 
 # =========================
 # Python
 # =========================
-python/.venv/
-python/__pycache__/
-python/*.pyc
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.dist-info/
 
-# Python outputs (optional)
-python/raw16_frames/
-python/previews/
-python/*.mp4
-python/*.raw
+# Jupyter etc (もし使うなら)
+.ipynb_checkpoints/
+
+# =========================
+# User local data / outputs
+# =========================
+# RAW連番・プレビューなど（必要なら調整）
+raw16_frames/
+previews/
+*.raw
+*.png
