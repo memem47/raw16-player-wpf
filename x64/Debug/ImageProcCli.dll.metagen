@@ -13,5 +13,6 @@ Class ImageProcCli.CpuFilters: AutoLayout, AnsiClass, Class, Public, Sealed, Bef
     Void .ctor(): PrivateScope, Public, HideBySig, SpecialName, RTSpecialName
   Methods:
     Box3x3(UInt16[], Int32, Int32, Double&(Out)): PrivateScope, Public, Static, HideBySig
+    Box3x3Cuda(UInt16[], Int32, Int32, Double&(Out)): PrivateScope, Public, Static, HideBySig
 Class ImageProcCli.Class1: AutoLayout, AnsiClass, Class, Public, BeforeFieldInit
     Void .ctor(): PrivateScope, Public, HideBySig, SpecialName, RTSpecialName

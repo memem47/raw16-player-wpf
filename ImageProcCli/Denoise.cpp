@@ -4,6 +4,8 @@
 #include <chrono>
 #include <algorithm>
 
+#include "cuda_denoise.h"  // CudaKernels‘¤ƒwƒbƒ_
+
 using namespace System;
 using namespace ImageProcCli;
 
@@ -55,5 +57,31 @@ array<UInt16>^ CpuFilters::Box3x3(array<UInt16>^ src, int width, int height, dou
     std::chrono::duration<double, std::milli> ms = t1 - t0;
     elapsedMs = ms.count();
 
+    return dst;
+}
+
+array<UInt16>^ CpuFilters::Box3x3Cuda(array<UInt16>^ src, int width, int height, double% elapsedMs)
+{
+    if (src == nullptr) throw gcnew ArgumentNullException("src");
+    if (width <= 0 || height <= 0) throw gcnew ArgumentException("invalid width/height");
+    if (src->Length != width * height) throw gcnew ArgumentException("src length mismatch");
+
+    auto dst = gcnew array<UInt16>(src->Length);
+
+    pin_ptr<UInt16> pSrc = &src[0];
+    pin_ptr<UInt16> pDst = &dst[0];
+
+    float ms = 0.0f;
+    int err = cuda_box3x3_u16(
+        reinterpret_cast<const uint16_t*>(pSrc),
+        reinterpret_cast<uint16_t*>(pDst),
+        width, height, &ms);
+
+    if (err != 0)
+    {
+        throw gcnew Exception("cuda_box3x3_u16 failed, code=" + err.ToString());
+    }
+
+    elapsedMs = (double)ms;
     return dst;
 }
