@@ -201,26 +201,39 @@ namespace RawPlayerWpf
             int w = _wb8.PixelWidth;
             int h = _wb8.PixelHeight;
 
+            // まず表示用の入力は「現在フレーム」
             ushort[] src16 = _currentFrame16;
 
-            // ★ DLL呼び出し（チェックONの時だけ）
-            if (ChkDenoise != null && ChkDenoise.IsChecked == true)
+            // ===== ここから：CPU/GPU処理分岐 =====
+            // UIがまだ初期化中の可能性もあるのでnullガード
+            bool useCpu = (ChkDenoise != null && ChkDenoise.IsChecked == true);
+            bool useGpu = (ChkDenoiseGpu != null && ChkDenoiseGpu.IsChecked == true);
+
+            if (useCpu)
             {
                 double ms;
-                // C++/CLI の static 関数を呼ぶ（.NET参照なのでそのまま）
+                // C++/CLI CPU版
                 ushort[] filtered = CpuFilters.Box3x3(src16, w, h, out ms);
                 src16 = filtered;
 
-                if (TxtProcMs != null)
-                    TxtProcMs.Text = $"CPU: {ms:F3} ms";
+                if (TxtProcMs != null) TxtProcMs.Text = $"CPU: {ms:F3} ms";
+            }
+            else if (useGpu)
+            {
+                double ms;
+                // C++/CLI GPU版（CUDA end-to-end計測を返す想定）
+                ushort[] filtered = CpuFilters.Box3x3Cuda(src16, w, h, out ms);
+                src16 = filtered;
+
+                if (TxtProcMs != null) TxtProcMs.Text = $"GPU(e2e): {ms:F3} ms";
             }
             else
             {
-                if (TxtProcMs != null)
-                    TxtProcMs.Text = "";
+                if (TxtProcMs != null) TxtProcMs.Text = "";
             }
+            // ===== ここまで：CPU/GPU処理分岐 =====
 
-            // 以下、WL/WWで src16 を 8bitに落として表示
+            // ===== WL/WWで src16 を Gray8 に落として表示 =====
             double wl = SldWL.Value;
             double ww = Math.Max(1.0, SldWW.Value);
 
@@ -238,6 +251,7 @@ namespace RawPlayerWpf
             }
 
             int stride = w;
+
             _wb8.Lock();
             try
             {
@@ -249,5 +263,30 @@ namespace RawPlayerWpf
                 _wb8.Unlock();
             }
         }
+
+        private void ChkDenoise_Checked(object sender, RoutedEventArgs e)
+        {
+            // CPUをONにしたらGPUはOFF（排他）
+            if (ChkDenoiseGpu != null) ChkDenoiseGpu.IsChecked = false;
+            RenderCurrentFrameWithWlWw();
+        }
+
+        private void ChkDenoise_Unchecked(object sender, RoutedEventArgs e)
+        {
+            RenderCurrentFrameWithWlWw();
+        }
+
+        private void ChkDenoiseGpu_Checked(object sender, RoutedEventArgs e)
+        {
+            // GPUをONにしたらCPUはOFF（排他）
+            if (ChkDenoise != null) ChkDenoise.IsChecked = false;
+            RenderCurrentFrameWithWlWw();
+        }
+
+        private void ChkDenoiseGpu_Unchecked(object sender, RoutedEventArgs e)
+        {
+            RenderCurrentFrameWithWlWw();
+        }
+
     }
 }
