@@ -6,6 +6,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using System.Collections.Generic;
+using System.Text.Json;
 using Microsoft.Win32;
 
 using ImageProcCli;
@@ -37,8 +38,8 @@ namespace RawPlayerWpf
         {
             var dlg = new OpenFileDialog
             {
-                Title = "RAWフォルダ内の任意のRAWファイルを選択してください",
-                Filter = "RAW files (*.raw)|*.raw",
+                Title = "RAWフォルダ内の任意のRAW/BINファイルを選択してください",
+                Filter = "RAW files (*.raw;*.bin)|*.raw;*.bin|RAW (*.raw)|*.raw|BIN (*.bin)|*.bin",
                 CheckFileExists = true
             };
 
@@ -51,8 +52,19 @@ namespace RawPlayerWpf
 
         private void LoadFolder(string folder)
         {
-            // frame_XXXX.raw などを想定してソート
-            _rawFiles = Directory.GetFiles(folder, "*.raw")
+            // 画像サイズ自動セット
+            if (TryLoadMetaSize(folder, out int mw, out int mh) ||
+                TryGuessSizeFromFirstRaw(folder, out mw, out mh))
+            {
+                TxtW.Text = mw.ToString();
+                TxtH.Text = mh.ToString();
+            }
+            _rawFiles = Directory.GetFiles(folder)
+                                 .Where(p =>
+                                 {
+                                     string ext = System.IO.Path.GetExtension(p).ToLowerInvariant();
+                                     return ext == ".raw" || ext == ".bin";
+                                 })
                                  .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
                                  .ToList();
 
@@ -68,6 +80,75 @@ namespace RawPlayerWpf
             // 初回表示
             ShowFrame(_index);
             UpdateStatus();
+        }
+
+        private bool TryLoadMetaSize(string folder, out int w, out int h)
+        {
+            w = h = 0;
+            string metaPath = System.IO.Path.Combine(folder, "meta.json");
+            if (!File.Exists(metaPath)) return false;
+
+            try
+            {
+                var json = File.ReadAllText(metaPath);
+                var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+
+                if (root.TryGetProperty("width", out var jw) && root.TryGetProperty("height", out var jh))
+                {
+                    w = jw.GetInt32();
+                    h = jh.GetInt32();
+                    return (w > 0 && h > 0);
+                }
+            }
+            catch { /* 読めなければ無視 */}
+
+            return false;
+        }
+
+        private bool TryGuessSizeFromFirstRaw(string folder, out int w, out int h)
+        {
+            w = h = 0;
+            var first = Directory.GetFiles(folder, "*.raw")
+                .Concat(Directory.GetFiles(folder, "*.bin"))
+                .OrderBy(p => p)
+                .FirstOrDefault();
+            if (first == null) return false;
+
+            long bytes = new FileInfo(first).Length;
+            if (bytes % 2 != 0) return false;
+
+            long nPix = bytes / 2;
+
+            //画像の縦横サイズが同じ
+            int root = (int)Math.Sqrt(nPix);
+            if (root * root == nPix)
+            {
+                w = h = root;
+                return true;
+            }
+
+            // サイズ候補
+            (int W, int H)[] candidates =
+            {
+                (640, 480),
+                (768, 512),
+                (800, 600),
+                (1024, 768),
+                (1280, 720),
+                (1280, 1024),
+                (1920, 1080),
+            };
+
+            foreach (var c in candidates)
+            {
+                if ((long)c.W * c.H == nPix)
+                {
+                    w = c.W; h = c.H;
+                    return true;
+                }
+            }
+            return false;
         }
 
         private void BtnPlay_Click(object sender, RoutedEventArgs e)

@@ -7,6 +7,9 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+# Example:
+# python .\mp4_to_raw16_dump.py --video .\grayscale_test_video.mp4 --out_dir .\raw16_frames --preview_dir .\previews
+
 
 def to_gray_u8(frame: np.ndarray) -> np.ndarray:
     """Ensure grayscale uint8."""
