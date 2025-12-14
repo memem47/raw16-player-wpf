@@ -9,6 +9,7 @@ x86/
 [Aa]rm64/
 Debug/
 Release/
+packages/
 *.user
 *.suo
 *.userosscache
@@ -92,7 +93,9 @@ __pycache__/
 # User local data / outputs
 # =========================
 # RAW連番・プレビューなど（必要なら調整）
+python/sample/
 raw16_frames/
 previews/
 *.raw
 *.png
+*.bin
